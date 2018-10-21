@@ -22,6 +22,7 @@
 #define PORT_ARGUMENT 6
 
 enum LoginStatus { LOG_OUT, LOG_PASS, LOG_IN };
+enum RenameStatus { RENAME_NONE, RENAME_PROGRESS };
 
 struct User {
   char username[25];
@@ -30,14 +31,16 @@ struct User {
 
 struct Status {
   char userName[25];
+  char rnfName[25];
   int clientIP[4];
   int clientPort[2];
   int serverIP[4];
   int serverPort[2];
-  enum LoginStatus loginStatus;
-  enum ConnectType connectType;
   int fd_transport;
   int fd_command;
+  enum LoginStatus loginStatus;
+  enum RenameStatus renameStatus;
+  enum ConnectType connectType;
 };
 
 struct Command {

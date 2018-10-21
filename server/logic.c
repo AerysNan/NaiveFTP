@@ -120,8 +120,23 @@ int handler_list(char *request, char *response, struct Status *status) {
   status->connectType = CONNECT_NONE;
   return retVal;
 }
-int handler_rnfr(char *request, char *response, struct Status *status) { return 0; }
-int handler_rnto(char *request, char *response, struct Status *status) { return 0; }
+int handler_rnfr(char *request, char *response, struct Status *status) {
+  if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
+  printf("%s\n", request);
+  fflush(stdout);
+  if (access(request, W_OK) == 0) {
+    status->renameStatus = RENAME_PROGRESS;
+    strcpy(status->rnfName, request);
+    return handler_response(350, "File exists, ready for destination\n", response, status);
+  } else
+    return handler_response(550, "File not exist\n", response, status);
+}
+int handler_rnto(char *request, char *response, struct Status *status) {
+  if (*response == 0) return handler_response(501, "Syntax error\n", response, status);
+  if (status->renameStatus != RENAME_PROGRESS) return handler_response(503, "File not specified\n", response, status);
+  if (rename(status->rnfName, request) == 0) return handler_response(250, "File successfully renamed or moved\n", response, status);
+  return handler_response(553, "Cannot rename or move file\n", response, status);
+}
 int handler_mkd(char *request, char *response, struct Status *status) { return 0; }
 int handler_cwd(char *request, char *response, struct Status *status) { return 0; }
 int handler_pwd(char *request, char *response, struct Status *status) { return 0; }

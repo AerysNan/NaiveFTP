@@ -6,6 +6,7 @@ int new_connection(void *new_fd) {
   char output_buffer[BUFSIZ];
   struct Status status;
   status.connectType = CONNECT_NONE;
+  status.renameStatus = RENAME_NONE;
   status.loginStatus = LOG_OUT;
   status.fd_command = *(int *)new_fd;
   int tempfd = socket(AF_INET, SOCK_DGRAM, 0);
