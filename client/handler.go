@@ -44,7 +44,7 @@ var (
 		"rmdir": Command{text: "rmd", argc: 1},
 		"syst":  Command{text: "syst", argc: 0},
 		"quit":  Command{text: "quit", argc: 0},
-		"abor":  Command{text: "abor", argc: 0},
+		"bye":   Command{text: "abor", argc: 0},
 		"pwd":   Command{text: "pwd", argc: 0},
 		"rm":    Command{text: "dele", argc: 1},
 	}
@@ -70,7 +70,6 @@ func (handler *Handler) CmdPassive(cmd string) (net.Conn, string) {
 	var h1, h2, h3, h4, p1, p2 int
 	fmt.Sscanf(address, "(%d,%d,%d,%d,%d,%d)", &h1, &h2, &h3, &h4, &p1, &p2)
 	url := strconv.Itoa(h1) + "." + strconv.Itoa(h2) + "." + strconv.Itoa(h3) + "." + strconv.Itoa(h4) + ":" + strconv.Itoa((p1<<8)+p2)
-	fmt.Println(url)
 	connection, _ := net.Dial("tcp", url)
 	handler.InstRequest(cmd)
 	response = handler.InstResponse()
@@ -78,10 +77,9 @@ func (handler *Handler) CmdPassive(cmd string) (net.Conn, string) {
 	return connection, response
 }
 
-func (handler *Handler) CmdPositive(cmd string) (net.Conn, string) {
+func (handler *Handler) CmdPositive(cmd string) (net.Listener, string) {
 	host, _, _ := net.SplitHostPort(handler.connection.LocalAddr().String())
 	ip := strings.Join(strings.Split(host, "."), ",")
-	fmt.Println(ip)
 	for {
 		port := rand.Int()%45535 + 20000
 		listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
@@ -91,8 +89,10 @@ func (handler *Handler) CmdPositive(cmd string) (net.Conn, string) {
 			handler.InstRequest(cmd)
 			response := handler.InstResponse()
 			fmt.Println(response)
-			connection, _ := listener.Accept()
-			return connection, response
+			if !strings.HasPrefix(response, "150") {
+				return nil, response
+			}
+			return listener, response
 		}
 	}
 }

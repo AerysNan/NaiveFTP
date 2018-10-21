@@ -3,14 +3,17 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"net"
 	"os"
 	"path"
 	"sort"
 	"strings"
+	"time"
 )
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
 	reader := bufio.NewReader(os.Stdin)
 	if len(os.Args) == 1 {
 		fmt.Println("Server address not specified")
@@ -31,6 +34,7 @@ func main() {
 	fmt.Println(response)
 	fmt.Print("Username:")
 	username, _, _ := reader.ReadLine()
+	fmt.Println(string(username))
 	handler.InstRequest("user " + string(username))
 	response = handler.InstResponse()
 	fmt.Println(response)
@@ -88,20 +92,24 @@ func main() {
 			if len(inputList) < 2 {
 				goto label
 			}
-			var conn net.Conn
-			var resp string
 			if handler.passive {
-				conn, resp = handler.CmdPassive("retr " + inputList[1])
+				conn, resp := handler.CmdPassive("retr " + inputList[1])
+				if !strings.HasPrefix(resp, "150") {
+					_, fileName := path.Split(inputList[1])
+					handler.DataResponse(conn, fileName)
+					conn.Close()
+					fmt.Println(handler.InstResponse())
+				}
 			} else {
-				conn, resp = handler.CmdPositive("retr " + inputList[1])
+				lis, resp := handler.CmdPositive("retr " + inputList[1])
+				if !strings.HasPrefix(resp, "150") {
+					conn, _ := lis.Accept()
+					_, fileName := path.Split(inputList[1])
+					handler.DataResponse(conn, fileName)
+					conn.Close()
+					fmt.Println(handler.InstResponse())
+				}
 			}
-			if !strings.HasPrefix(resp, "150") {
-				return
-			}
-			_, fileName := path.Split(inputList[1])
-			handler.DataResponse(conn, fileName)
-			conn.Close()
-			fmt.Println(handler.InstResponse())
 		} else if cmdstr == "put" {
 			if len(inputList) < 2 {
 				goto label
@@ -110,39 +118,44 @@ func main() {
 				goto label
 			}
 			_, fileName := path.Split(inputList[1])
-			var conn net.Conn
-			var resp string
 			if handler.passive {
-				conn, resp = handler.CmdPassive("stor " + fileName)
+				conn, resp := handler.CmdPassive("stor " + fileName)
+				if strings.HasPrefix(resp, "150") {
+					handler.DataRequest(conn, inputList[1])
+					conn.Close()
+					fmt.Println(handler.InstResponse())
+				}
 			} else {
-				conn, resp = handler.CmdPositive("stor " + fileName)
+				lis, resp := handler.CmdPositive("stor " + fileName)
+				if strings.HasPrefix(resp, "150") {
+					conn, _ := lis.Accept()
+					handler.DataRequest(conn, inputList[1])
+					conn.Close()
+					fmt.Println(handler.InstResponse())
+				}
 			}
-			if !strings.HasPrefix(resp, "150") {
-				return
-			}
-			handler.DataRequest(conn, inputList[1])
-			conn.Close()
-			fmt.Println(handler.InstResponse())
 		} else if cmdstr == "ls" {
 			cmdfull := "list"
 			if len(inputList) == 2 {
 				cmdfull = cmdfull + " " + inputList[1]
 			}
-			func() {
-				var conn net.Conn
-				var resp string
-				if handler.passive {
-					conn, resp = handler.CmdPassive(cmdfull)
-				} else {
-					conn, resp = handler.CmdPositive(cmdfull)
+			if handler.passive {
+				conn, resp := handler.CmdPassive(cmdfull)
+				if strings.HasPrefix(resp, "150") {
+					handler.DataResponse(conn, "")
+					conn.Close()
+					fmt.Println(handler.InstResponse())
 				}
-				defer conn.Close()
-				if !strings.HasPrefix(resp, "150") {
-					return
+			} else {
+				lis, resp := handler.CmdPositive(cmdfull)
+				if strings.HasPrefix(resp, "150") {
+					conn, _ := lis.Accept()
+					handler.DataResponse(conn, "")
+					conn.Close()
+					fmt.Println(handler.InstResponse())
 				}
-				handler.DataResponse(conn, "")
-				fmt.Println(handler.InstResponse())
-			}()
+			}
+
 		} else if cmdstr == "mv" {
 			if len(inputList) < 3 {
 				goto label
