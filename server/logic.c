@@ -110,12 +110,15 @@ int handler_pasv(char *request, char *response, struct Status *status) {
   }
 }
 int handler_list(char *request, char *response, struct Status *status) {
+  int retVal;
   if (status->connectType == CONNECT_NONE)
-    return handler_response(425, "Cannot open data connection\n", response, status);
+    retVal = handler_response(425, "Cannot open data connection\n", response, status);
   else if (status->connectType == CONNECT_POSITIVE)
-    return list_port(request, response, status);
+    retVal = list_port(request, response, status);
   else if (status->connectType == CONNECT_PASSIVE)
-    return 0;
+    retVal = list_pasv(request, response, status);
+  status->connectType = CONNECT_NONE;
+  return retVal;
 }
 int handler_rnfr(char *request, char *response, struct Status *status) { return 0; }
 int handler_rnto(char *request, char *response, struct Status *status) { return 0; }
@@ -158,7 +161,37 @@ int list_port(char *request, char *response, struct Status *status) {
   return handler_response(226, "Closing data connection\n", response, status);
 }
 
-int list_pasv(char *request, char *response, struct Status *status) { return 0; }
+int list_pasv(char *request, char *response, struct Status *status) {
+  int struct_len;
+  struct sockaddr_in clientAddress;
+  int new_fd = accept(status->fd_transport, (struct sockaddr *)&clientAddress, &struct_len);
+  if (new_fd == -1) {
+    close(status->fd_transport);
+    close(new_fd);
+    return handler_response(425, "Connection to client failed\n", response, status);
+  }
+  char cmd[DIR_LENGTH];
+  if (*request == 0)
+    sprintf(cmd, "ls");
+  else {
+    sprintf(cmd, "ls ");
+    strcat(cmd, request);
+  }
+  FILE *pipe = popen(cmd, "r");
+  if (!pipe) {
+    close(status->fd_transport);
+    close(new_fd);
+    fclose(pipe);
+    return handler_response(550, "File listing failed\n", response, status);
+  }
+  handler_response(150, "Opening data connection\n", response, status);
+  int retVal = send_data(new_fd, pipe);
+  close(status->fd_transport);
+  close(new_fd);
+  fclose(pipe);
+  if (retVal < 0) return handler_response(426, "Send data error\n", response, status);
+  return handler_response(226, "Closing data connection\n", response, status);
+}
 
 int send_data(int fd, FILE *pipe) {
   char buffer[BUFSIZ];
