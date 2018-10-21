@@ -94,21 +94,24 @@ func main() {
 			}
 			if handler.passive {
 				conn, resp := handler.CmdPassive("retr " + inputList[1])
-				if !strings.HasPrefix(resp, "150") {
+				if strings.HasPrefix(resp, "150") {
 					_, fileName := path.Split(inputList[1])
 					handler.DataResponse(conn, fileName)
 					conn.Close()
 					fmt.Println(handler.InstResponse())
 				}
 			} else {
-				lis, resp := handler.CmdPositive("retr " + inputList[1])
-				if !strings.HasPrefix(resp, "150") {
-					conn, _ := lis.Accept()
-					_, fileName := path.Split(inputList[1])
-					handler.DataResponse(conn, fileName)
-					conn.Close()
-					fmt.Println(handler.InstResponse())
-				}
+				func() {
+					lis, resp := handler.CmdPositive("retr " + inputList[1])
+					defer lis.Close()
+					if strings.HasPrefix(resp, "150") {
+						conn, _ := lis.Accept()
+						_, fileName := path.Split(inputList[1])
+						handler.DataResponse(conn, fileName)
+						conn.Close()
+						fmt.Println(handler.InstResponse())
+					}
+				}()
 			}
 		} else if cmdstr == "put" {
 			if len(inputList) < 2 {
@@ -126,13 +129,16 @@ func main() {
 					fmt.Println(handler.InstResponse())
 				}
 			} else {
-				lis, resp := handler.CmdPositive("stor " + fileName)
-				if strings.HasPrefix(resp, "150") {
-					conn, _ := lis.Accept()
-					handler.DataRequest(conn, inputList[1])
-					conn.Close()
-					fmt.Println(handler.InstResponse())
-				}
+				func() {
+					lis, resp := handler.CmdPositive("stor " + fileName)
+					defer lis.Close()
+					if strings.HasPrefix(resp, "150") {
+						conn, _ := lis.Accept()
+						handler.DataRequest(conn, inputList[1])
+						conn.Close()
+						fmt.Println(handler.InstResponse())
+					}
+				}()
 			}
 		} else if cmdstr == "ls" {
 			cmdfull := "list"
@@ -147,13 +153,16 @@ func main() {
 					fmt.Println(handler.InstResponse())
 				}
 			} else {
-				lis, resp := handler.CmdPositive(cmdfull)
-				if strings.HasPrefix(resp, "150") {
-					conn, _ := lis.Accept()
-					handler.DataResponse(conn, "")
-					conn.Close()
-					fmt.Println(handler.InstResponse())
-				}
+				func() {
+					lis, resp := handler.CmdPositive(cmdfull)
+					defer lis.Close()
+					if strings.HasPrefix(resp, "150") {
+						conn, _ := lis.Accept()
+						handler.DataResponse(conn, "")
+						conn.Close()
+						fmt.Println(handler.InstResponse())
+					}
+				}()
 			}
 
 		} else if cmdstr == "mv" {
