@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"math/rand"
 	"net"
@@ -12,7 +13,15 @@ import (
 	"time"
 )
 
+var (
+	host string
+	port string
+)
+
 func main() {
+	flag.StringVar(&host, "host", "localhost", "IP adress of the server")
+	flag.StringVar(&port, "port", "21", "Port of the server")
+	flag.Parse()
 	rand.Seed(time.Now().UTC().UnixNano())
 	reader := bufio.NewReader(os.Stdin)
 	if len(os.Args) == 1 {
@@ -21,8 +30,8 @@ func main() {
 	}
 	var err error
 	handler := Handler{}
-	fmt.Println("Connecting to " + os.Args[1] + "......")
-	connection, err := net.Dial("tcp", os.Args[1]+":21")
+	fmt.Println("Connecting to " + host + "......")
+	connection, err := net.Dial("tcp", host+":"+port)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
