@@ -106,7 +106,9 @@ func main() {
 				conn, resp := handler.CmdPassive("retr " + inputList[1])
 				if strings.HasPrefix(resp, "150") {
 					_, fileName := path.Split(inputList[1])
-					handler.DataResponse(conn, fileName, os.O_CREATE|os.O_WRONLY)
+					file, _ := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0755)
+					handler.DataResponse(conn, file)
+					file.Close()
 					conn.Close()
 					fmt.Println(handler.InstResponse())
 				}
@@ -117,7 +119,9 @@ func main() {
 					if strings.HasPrefix(resp, "150") {
 						conn, _ := lis.Accept()
 						_, fileName := path.Split(inputList[1])
-						handler.DataResponse(conn, fileName, os.O_CREATE|os.O_WRONLY)
+						file, _ := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0755)
+						handler.DataResponse(conn, file)
+						file.Close()
 						conn.Close()
 						fmt.Println(handler.InstResponse())
 					}
@@ -134,7 +138,9 @@ func main() {
 			if handler.passive {
 				conn, resp := handler.CmdPassive("stor " + fileName)
 				if strings.HasPrefix(resp, "150") {
-					handler.DataRequest(conn, inputList[1])
+					file, _ := os.OpenFile(inputList[1], os.O_RDONLY, 0755)
+					handler.DataRequest(conn, file)
+					file.Close()
 					conn.Close()
 					fmt.Println(handler.InstResponse())
 				}
@@ -144,7 +150,9 @@ func main() {
 					defer lis.Close()
 					if strings.HasPrefix(resp, "150") {
 						conn, _ := lis.Accept()
-						handler.DataRequest(conn, inputList[1])
+						file, _ := os.OpenFile(inputList[1], os.O_RDONLY, 0755)
+						handler.DataRequest(conn, file)
+						file.Close()
 						conn.Close()
 						fmt.Println(handler.InstResponse())
 					}
@@ -158,7 +166,7 @@ func main() {
 			if handler.passive {
 				conn, resp := handler.CmdPassive(cmdfull)
 				if strings.HasPrefix(resp, "150") {
-					handler.DataResponse(conn, "", 0)
+					handler.DataResponse(conn, nil)
 					conn.Close()
 					fmt.Println(handler.InstResponse())
 				}
@@ -168,7 +176,7 @@ func main() {
 					defer lis.Close()
 					if strings.HasPrefix(resp, "150") {
 						conn, _ := lis.Accept()
-						handler.DataResponse(conn, "", 0)
+						handler.DataResponse(conn, nil)
 						conn.Close()
 						fmt.Println(handler.InstResponse())
 					}
@@ -202,7 +210,9 @@ func main() {
 				conn, resp := handler.CmdPassive("retr " + inputList[1])
 				if strings.HasPrefix(resp, "150") {
 					_, fileName := path.Split(inputList[1])
-					handler.DataResponse(conn, fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND)
+					file, _ := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
+					handler.DataResponse(conn, file)
+					file.Close()
 					conn.Close()
 					fmt.Println(handler.InstResponse())
 				}
@@ -213,7 +223,9 @@ func main() {
 					if strings.HasPrefix(resp, "150") {
 						conn, _ := lis.Accept()
 						_, fileName := path.Split(inputList[1])
-						handler.DataResponse(conn, fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND)
+						file, _ := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
+						handler.DataResponse(conn, file)
+						file.Close()
 						conn.Close()
 						fmt.Println(handler.InstResponse())
 					}

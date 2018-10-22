@@ -9,7 +9,7 @@ int list_port(char *path, char *response, struct Status *status) {
   sprintf(ip, "%d.%d.%d.%d", status->clientIP[0], status->clientIP[1], status->clientIP[2], status->clientIP[3]);
   clientAddress.sin_addr.s_addr = inet_addr((const char *)ip);
   char cmd[DIR_LENGTH];
-  sprintf(cmd, "ls ");
+  sprintf(cmd, "ls -l ");
   strcat(cmd, path);
   FILE *pipe = popen(cmd, "r");
   if (!pipe) {
@@ -38,7 +38,7 @@ int list_pasv(char *path, char *response, struct Status *status) {
     return handler_response(425, "Connection to client failed\n", response, status);
   }
   char cmd[DIR_LENGTH];
-  sprintf(cmd, "ls ");
+  sprintf(cmd, "ls -l ");
   strcat(cmd, path);
   FILE *pipe = popen(cmd, "r");
   if (!pipe) {

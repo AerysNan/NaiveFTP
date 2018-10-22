@@ -97,9 +97,7 @@ func (handler *Handler) CmdPositive(cmd string) (net.Listener, string) {
 	}
 }
 
-func (handler *Handler) DataRequest(connection net.Conn, fileName string) {
-	file, _ := os.OpenFile(fileName, os.O_RDONLY, 0755)
-	defer file.Close()
+func (handler *Handler) DataRequest(connection net.Conn, file *os.File) {
 	for {
 		buffer := make([]byte, BUFFERSIZE)
 		n, err := file.Read(buffer)
@@ -112,22 +110,13 @@ func (handler *Handler) DataRequest(connection net.Conn, fileName string) {
 	}
 }
 
-func (handler *Handler) DataResponse(connection net.Conn, fileName string, flag int) {
-	var file *os.File
-	if fileName != "" {
-		file, _ = os.OpenFile(fileName, flag, 0755)
-	}
-	defer func() {
-		if fileName != "" {
-			file.Close()
-		}
-	}()
+func (handler *Handler) DataResponse(connection net.Conn, file *os.File) {
 	for {
 		buffer := make([]byte, BUFFERSIZE)
 		n, err := connection.Read(buffer)
 		buffer = buffer[:n]
 		print := func() {
-			if fileName != "" {
+			if file != nil {
 				file.Write(buffer)
 			} else {
 				fmt.Println(strings.TrimSpace(string(buffer)))
