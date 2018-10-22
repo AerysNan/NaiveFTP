@@ -45,7 +45,12 @@ int new_connection(void *new_fd);
 
 int list_port(char *request, char *response, struct Status *status);
 int list_pasv(char *request, char *response, struct Status *status);
+int stor_port(char *request, char *response, struct Status *status);
+int stor_pasv(char *request, char *response, struct Status *status);
+int retr_port(char *request, char *response, struct Status *status);
+int retr_pasv(char *request, char *response, struct Status *status);
 
 int send_data(int fd, FILE *pipe);
+int recv_data(int fd, FILE *pipe);
 
 #endif

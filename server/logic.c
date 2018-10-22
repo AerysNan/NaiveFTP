@@ -127,15 +127,41 @@ int handler_pasv(char *request, char *response, struct Status *status) {
   }
 }
 
-int handler_retr(char *request, char *response, struct Status *status) { return 0; }
+int handler_retr(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
+  char path[DIR_LENGTH];
+  if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
+  int retVal;
+  if (status->connectType == CONNECT_NONE)
+    retVal = handler_response(425, "Cannot open data connection\n", response, status);
+  else if (status->connectType == CONNECT_POSITIVE)
+    retVal = retr_port(path, response, status);
+  else if (status->connectType == CONNECT_PASSIVE)
+    retVal = retr_pasv(path, response, status);
+  status->connectType = CONNECT_NONE;
+  return retVal;
+}
 
-int handler_stor(char *request, char *response, struct Status *status) { return 0; }
+int handler_stor(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
+  char path[DIR_LENGTH];
+  if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
+  int retVal;
+  if (status->connectType == CONNECT_NONE)
+    retVal = handler_response(425, "Cannot open data connection\n", response, status);
+  else if (status->connectType == CONNECT_POSITIVE)
+    retVal = stor_port(path, response, status);
+  else if (status->connectType == CONNECT_PASSIVE)
+    retVal = stor_pasv(path, response, status);
+  status->connectType = CONNECT_NONE;
+  return retVal;
+}
 
 int handler_list(char *request, char *response, struct Status *status) {
   if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
-  int retVal;
   char path[DIR_LENGTH];
   if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
+  int retVal;
   if (status->connectType == CONNECT_NONE)
     retVal = handler_response(425, "Cannot open data connection\n", response, status);
   else if (status->connectType == CONNECT_POSITIVE)
@@ -222,72 +248,4 @@ int handler_dele(char *request, char *response, struct Status *status) {
   if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
   if (remove(path) == 0) return handler_response(250, "File removed\n", response, status);
   return handler_response(550, "Cannot remove file\n", response, status);
-}
-
-int list_port(char *path, char *response, struct Status *status) {
-  struct sockaddr_in clientAddress;
-  status->connectType = CONNECT_NONE;
-  clientAddress.sin_family = AF_INET;
-  clientAddress.sin_port = htons((status->clientPort[0] << 8) + status->clientPort[1]);
-  char ip[20];
-  sprintf(ip, "%d.%d.%d.%d", status->clientIP[0], status->clientIP[1], status->clientIP[2], status->clientIP[3]);
-  clientAddress.sin_addr.s_addr = inet_addr((const char *)ip);
-  char cmd[DIR_LENGTH];
-  sprintf(cmd, "ls ");
-  strcat(cmd, path);
-  FILE *pipe = popen(cmd, "r");
-  if (!pipe) {
-    close(status->fd_transport);
-    return handler_response(550, "File listing failed\n", response, status);
-  }
-  handler_response(150, "Opening data connection\n", response, status);
-  if (connect(status->fd_transport, (struct sockaddr *)&clientAddress, sizeof(clientAddress)) < 0) {
-    close(status->fd_transport);
-    handler_response(425, "Connection to client failed\n", response, status);
-  }
-  int retVal = send_data(status->fd_transport, pipe);
-  close(status->fd_transport);
-  if (pclose(pipe) == -1) return handler_response(551, "No such directory\n", response, status);
-  if (retVal < 0) return handler_response(426, "Send data error\n", response, status);
-  return handler_response(226, "Closing data connection\n", response, status);
-}
-
-int list_pasv(char *path, char *response, struct Status *status) {
-  int struct_len;
-  struct sockaddr_in clientAddress;
-  int new_fd = accept(status->fd_transport, (struct sockaddr *)&clientAddress, &struct_len);
-  if (new_fd == -1) {
-    close(status->fd_transport);
-    close(new_fd);
-    return handler_response(425, "Connection to client failed\n", response, status);
-  }
-  char cmd[DIR_LENGTH];
-  sprintf(cmd, "ls ");
-  strcat(cmd, path);
-  FILE *pipe = popen(cmd, "r");
-  if (!pipe) {
-    close(status->fd_transport);
-    close(new_fd);
-    return handler_response(550, "File listing failed\n", response, status);
-  }
-  handler_response(150, "Opening data connection\n", response, status);
-  int retVal = send_data(new_fd, pipe);
-  close(status->fd_transport);
-  close(new_fd);
-  if (pclose(pipe) == -1) return handler_response(551, "No such directory\n", response, status);
-  if (retVal < 0) return handler_response(426, "Send data error\n", response, status);
-  return handler_response(226, "Closing data connection\n", response, status);
-}
-
-int send_data(int fd, FILE *pipe) {
-  char buffer[BUFSIZ];
-  while (1) {
-    memset(buffer, 0, BUFSIZ);
-    unsigned length = fread(buffer, sizeof(char), BUFSIZ, pipe);
-    send(fd, buffer, length, 0);
-    if (length < BUFSIZ && ferror(pipe))
-      return -1;
-    else if (length < BUFSIZ)
-      return 0;
-  }
 }
