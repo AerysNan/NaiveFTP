@@ -1,5 +1,4 @@
 #include "server.h"
-#include "util.h"
 
 struct Command commandList[] = {
     {"user", handler_user}, {"pass", handler_pass}, {"retr", handler_retr}, {"stor", handler_stor}, {"quit", handler_quit}, {"syst", handler_syst},
@@ -57,6 +56,7 @@ int handler_pass(char *request, char *response, struct Status *status) {
       }
     }
   }
+  status->loginStatus = LOG_OUT;
   return handler_response(530, "Authentication failed\n", response, status);
 }
 int handler_retr(char *request, char *response, struct Status *status) { return 0; }
@@ -70,14 +70,17 @@ int handler_abor(char *request, char *response, struct Status *status) {
   return handler_response(221, "Logout\n", response, status);
 }
 int handler_syst(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (*request != 0) return handler_response(501, "Syntax error\n", response, status);
   return handler_response(215, "UNIX Type: L8\n", response, status);
 }
 int handler_type(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (strcmp(request, "I") == 0) return handler_response(200, "Type set to binary\n", response, status);
   return handler_response(504, "Unknown type\n", response, status);
 }
 int handler_port(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (status->connectType != CONNECT_NONE) {
     close(status->fd_transport);
     status->connectType = CONNECT_NONE;
@@ -94,6 +97,7 @@ int handler_port(char *request, char *response, struct Status *status) {
 }
 
 int handler_pasv(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (*request != 0) return handler_response(501, "Syntax error\n", response, status);
   if (status->connectType != CONNECT_NONE) {
     close(status->fd_transport);
@@ -119,40 +123,72 @@ int handler_pasv(char *request, char *response, struct Status *status) {
   }
 }
 int handler_list(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   int retVal;
+  char path[DIR_LENGTH];
+  if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
   if (status->connectType == CONNECT_NONE)
     retVal = handler_response(425, "Cannot open data connection\n", response, status);
   else if (status->connectType == CONNECT_POSITIVE)
-    retVal = list_port(request, response, status);
+    retVal = list_port(path, response, status);
   else if (status->connectType == CONNECT_PASSIVE)
-    retVal = list_pasv(request, response, status);
+    retVal = list_pasv(path, response, status);
   status->connectType = CONNECT_NONE;
   return retVal;
 }
 int handler_rnfr(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
-  printf("%s\n", request);
-  fflush(stdout);
-  if (access(request, W_OK) == 0) {
+  char path[DIR_LENGTH];
+  if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
+  if (access(path, W_OK) == 0) {
     status->renameStatus = RENAME_PROGRESS;
-    strcpy(status->rnfName, request);
+    strcpy(status->rnfName, path);
     return handler_response(350, "File exists, ready for destination\n", response, status);
   } else
     return handler_response(550, "File not exist\n", response, status);
 }
 int handler_rnto(char *request, char *response, struct Status *status) {
-  if (*response == 0) return handler_response(501, "Syntax error\n", response, status);
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
+  if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
   if (status->renameStatus != RENAME_PROGRESS) return handler_response(503, "File not specified\n", response, status);
-  if (rename(status->rnfName, request) == 0) return handler_response(250, "File successfully renamed or moved\n", response, status);
+  char path[DIR_LENGTH];
+  if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
+  status->renameStatus = RENAME_NONE;
+  if (rename(status->rnfName, path) == 0) return handler_response(250, "File successfully renamed or moved\n", response, status);
   return handler_response(553, "Cannot rename or move file\n", response, status);
 }
-int handler_mkd(char *request, char *response, struct Status *status) { return 0; }
-int handler_cwd(char *request, char *response, struct Status *status) { return 0; }
+int handler_mkd(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
+  if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
+  char path[DIR_LENGTH];
+  if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
+  if (mkdir(path, 0777) == 0) return handler_response(250, "Directory successfully created\n", response, status);
+  return handler_response(550, "Create directory failed\n", response, status);
+}
+int handler_cwd(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
+  if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
+  char path[DIR_LENGTH];
+  if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
+  DIR *dir = opendir(path);
+  if (!dir) return handler_response(550, "No such directory\n", response, status);
+  closedir(dir);
+  strcpy(status->currentDir, path + strlen(status->rootDir));
+  char message[200];
+  strcpy(message, "Current working directory successfully changed to ");
+  if (status->currentDir)
+    strcat(message, status->currentDir);
+  else
+    strcat(message, "/");
+  strcat(message, "\n");
+  return handler_response(250, message, response, status);
+}
 int handler_pwd(char *request, char *response, struct Status *status) { return 0; }
 int handler_rmd(char *request, char *response, struct Status *status) { return 0; }
 int handler_dele(char *request, char *response, struct Status *status) { return 0; }
 
-int list_port(char *request, char *response, struct Status *status) {
+int list_port(char *path, char *response, struct Status *status) {
   struct sockaddr_in clientAddress;
   status->connectType = CONNECT_NONE;
   clientAddress.sin_family = AF_INET;
@@ -161,16 +197,11 @@ int list_port(char *request, char *response, struct Status *status) {
   sprintf(ip, "%d.%d.%d.%d", status->clientIP[0], status->clientIP[1], status->clientIP[2], status->clientIP[3]);
   clientAddress.sin_addr.s_addr = inet_addr((const char *)ip);
   char cmd[DIR_LENGTH];
-  if (*request == 0)
-    sprintf(cmd, "ls");
-  else {
-    sprintf(cmd, "ls ");
-    strcat(cmd, request);
-  }
+  sprintf(cmd, "ls ");
+  strcat(cmd, path);
   FILE *pipe = popen(cmd, "r");
   if (!pipe) {
     close(status->fd_transport);
-    fclose(pipe);
     return handler_response(550, "File listing failed\n", response, status);
   }
   handler_response(150, "Opening data connection\n", response, status);
@@ -180,12 +211,12 @@ int list_port(char *request, char *response, struct Status *status) {
   }
   int retVal = send_data(status->fd_transport, pipe);
   close(status->fd_transport);
-  fclose(pipe);
+  if (pclose(pipe) == -1) return handler_response(551, "No such directory\n", response, status);
   if (retVal < 0) return handler_response(426, "Send data error\n", response, status);
   return handler_response(226, "Closing data connection\n", response, status);
 }
 
-int list_pasv(char *request, char *response, struct Status *status) {
+int list_pasv(char *path, char *response, struct Status *status) {
   int struct_len;
   struct sockaddr_in clientAddress;
   int new_fd = accept(status->fd_transport, (struct sockaddr *)&clientAddress, &struct_len);
@@ -195,24 +226,19 @@ int list_pasv(char *request, char *response, struct Status *status) {
     return handler_response(425, "Connection to client failed\n", response, status);
   }
   char cmd[DIR_LENGTH];
-  if (*request == 0)
-    sprintf(cmd, "ls");
-  else {
-    sprintf(cmd, "ls ");
-    strcat(cmd, request);
-  }
+  sprintf(cmd, "ls ");
+  strcat(cmd, path);
   FILE *pipe = popen(cmd, "r");
   if (!pipe) {
     close(status->fd_transport);
     close(new_fd);
-    fclose(pipe);
     return handler_response(550, "File listing failed\n", response, status);
   }
   handler_response(150, "Opening data connection\n", response, status);
   int retVal = send_data(new_fd, pipe);
   close(status->fd_transport);
   close(new_fd);
-  fclose(pipe);
+  if (pclose(pipe) == -1) return handler_response(551, "No such directory\n", response, status);
   if (retVal < 0) return handler_response(426, "Send data error\n", response, status);
   return handler_response(226, "Closing data connection\n", response, status);
 }

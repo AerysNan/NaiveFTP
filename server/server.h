@@ -10,47 +10,12 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include "util.h"
-
-#define CODE_LENGTH 3
-#define DIR_LENGTH 100
-#define PORT_ARGUMENT 6
-
-enum LoginStatus { LOG_OUT, LOG_PASS, LOG_IN };
-enum RenameStatus { RENAME_NONE, RENAME_PROGRESS };
-
-struct User {
-  char username[25];
-  char password[25];
-};
-
-struct Status {
-  char userName[25];
-  char rnfName[25];
-  char rootDir[20];
-  char currentDir[100];
-  int clientIP[4];
-  int clientPort[2];
-  int serverIP[4];
-  int serverPort[2];
-  int fd_transport;
-  int fd_command;
-  enum LoginStatus loginStatus;
-  enum RenameStatus renameStatus;
-  enum ConnectType connectType;
-};
-
-struct Command {
-  char text[5];
-  int (*handler)(char *request, char *response, struct Status *status);
-};
 
 int parse_commandline(int argc, char *argv[]);
 
