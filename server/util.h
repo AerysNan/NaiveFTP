@@ -50,7 +50,7 @@ struct PathNode {
 char *trim_space_left(char *string);
 char *trim_space_right(char *string);
 char *trim_space(char *string);
-void toLower(char *string);
+void command_tolower(char *string);
 
 int path_join(char *path, struct Status *status, char *out);
 int path_squash(char *path, char *squashed);

@@ -1,7 +1,10 @@
 #include "server.h"
 
-char rootDir[20];
+char rootDir[100];
+char confDir[100];
 int portNum;
+
+struct User userList[30];
 
 int main(int argc, char *argv[]) {
   srand((unsigned)time(NULL));
@@ -11,6 +14,10 @@ int main(int argc, char *argv[]) {
     return 1;
   } else if (parse_val == 1)
     return 0;
+  if (parse_userlist() == -1) {
+    printf("Initialize user list failed\n");
+    return 1;
+  }
   int fd, struct_len, numbytes;
   struct sockaddr_in server_address;
   void *return_val;
@@ -52,15 +59,16 @@ int main(int argc, char *argv[]) {
 
 int parse_commandline(int argc, char *argv[]) {
   strcpy(rootDir, "/tmp");
+  memset(confDir, 0, 100);
   portNum = 21;
-  const char *optstring = "p::r::h::";
   struct option opts[] = {
-      {"root", 1, NULL, 'r'},
-      {"port", 1, NULL, 'p'},
-      {"help", 0, NULL, 'h'},
+      {"root", required_argument, NULL, 'r'},
+      {"port", required_argument, NULL, 'p'},
+      {"user", required_argument, NULL, 'u'},
+      {"help", no_argument, NULL, 'h'},
   };
   int c;
-  while ((c = getopt_long(argc, argv, optstring, opts, NULL)) != -1) {
+  while ((c = getopt_long_only(argc, argv, "p:r:u:h:", opts, NULL)) != -1) {
     switch (c) {
       case 'r': {
         DIR *dir = opendir(optarg);
@@ -73,6 +81,14 @@ int parse_commandline(int argc, char *argv[]) {
         printf("Root directory set to %s\n", optarg);
         strcpy(rootDir, optarg);
       } break;
+      case 'u':
+        if (access(optarg, R_OK)) {
+          perror("Invalid config file path");
+          return -1;
+        }
+        printf("Configuration file set to %s\n", optarg);
+        strcpy(confDir, optarg);
+        break;
       case 'p':
         portNum = atoi(optarg);
         if (!portNum) {
@@ -83,9 +99,10 @@ int parse_commandline(int argc, char *argv[]) {
         break;
       case 'h':
         printf("Usage:\n");
-        printf("--port / -p   Specify port number of the server\n");
-        printf("--root / -r   Specify root directory of the server\n");
-        printf("--help / -h   Print this help information\n");
+        printf("--port / -port / -p   Specify port number of the server\n");
+        printf("--root / -root / -r   Specify root directory of the server\n");
+        printf("--user / -user / -u   Specify configuration file of the server\n");
+        printf("--help / -help / -h   Print this help information\n");
         return 1;
       case '?':
         return -1;
@@ -93,5 +110,20 @@ int parse_commandline(int argc, char *argv[]) {
         break;
     }
   }
+  return 0;
+}
+
+int parse_userlist() {
+  if (*confDir == 0) return 0;
+  int cnt = 0;
+  FILE *pipe = fopen(confDir, "r");
+  if (!pipe) return -1;
+  char buffer[BUFSIZ];
+  while (fgets(buffer, BUFSIZ, pipe)) {
+    sscanf(buffer, "%s %s", userList[cnt].username, userList[cnt].password);
+    printf("%s %s", userList[cnt].username, userList[cnt].password);
+    cnt++;
+  }
+  fclose(pipe);
   return 0;
 }

@@ -1,19 +1,16 @@
 #include "server.h"
 
+extern struct User userList[30];
+
 struct Command commandList[] = {
     {"user", handler_user}, {"pass", handler_pass}, {"retr", handler_retr}, {"stor", handler_stor}, {"quit", handler_quit}, {"syst", handler_syst}, {"type", handler_type},
     {"port", handler_port}, {"pasv", handler_pasv}, {"list", handler_list}, {"rnfr", handler_rnfr}, {"rnto", handler_rnto}, {"mkd", handler_mkd},   {"cwd", handler_cwd},
     {"pwd", handler_pwd},   {"rmd", handler_rmd},   {"dele", handler_dele}, {"abor", handler_abor}, {"rest", handler_rest},
 };
 
-struct User userList[] = {
-    {"Aerys", "123456"},
-    {"Baltimore", "654321"},
-};
-
 int handler_request(char *request, char *response, struct Status *status) {
   int size = sizeof(commandList) / sizeof(*commandList);
-  toLower(request);
+  command_tolower(request);
   for (int i = 0; i < size; i++) {
     struct Command *command = &commandList[i];
     int len = strlen(command->text);

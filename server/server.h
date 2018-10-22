@@ -18,6 +18,7 @@
 #include "util.h"
 
 int parse_commandline(int argc, char *argv[]);
+int parse_userlist();
 
 int handler_request(char *request, char *response, struct Status *status);
 int handler_response(int code, char *description, char *response, struct Status *status);
