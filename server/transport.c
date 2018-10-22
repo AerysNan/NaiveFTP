@@ -21,7 +21,7 @@ int list_port(char *path, char *response, struct Status *status) {
     close(status->fd_transport);
     handler_response(425, "Connection to client failed\n", response, status);
   }
-  int retVal = send_data(status->fd_transport, pipe);
+  int retVal = send_data(status->fd_transport, pipe, status);
   close(status->fd_transport);
   if (pclose(pipe) == -1) return handler_response(551, "No such directory\n", response, status);
   if (retVal < 0) return handler_response(426, "Send data error\n", response, status);
@@ -47,7 +47,7 @@ int list_pasv(char *path, char *response, struct Status *status) {
     return handler_response(550, "File listing failed\n", response, status);
   }
   handler_response(150, "Opening data connection\n", response, status);
-  int retVal = send_data(new_fd, pipe);
+  int retVal = send_data(new_fd, pipe, status);
   close(status->fd_transport);
   close(new_fd);
   if (pclose(pipe) == -1) return handler_response(551, "No such directory\n", response, status);
@@ -73,7 +73,7 @@ int stor_port(char *request, char *response, struct Status *status) {
     close(status->fd_transport);
     handler_response(425, "Connection to client failed\n", response, status);
   }
-  int retVal = recv_data(status->fd_transport, pipe);
+  int retVal = recv_data(status->fd_transport, pipe, status);
   close(status->fd_transport);
   if (pclose(pipe) == -1) return handler_response(551, "No such file\n", response, status);
   if (retVal < 0) return handler_response(426, "Send data error\n", response, status);
@@ -96,7 +96,7 @@ int stor_pasv(char *request, char *response, struct Status *status) {
     return handler_response(550, "Failed to open file\n", response, status);
   }
   handler_response(150, "Opening data connection\n", response, status);
-  int retVal = recv_data(new_fd, pipe);
+  int retVal = recv_data(new_fd, pipe, status);
   close(status->fd_transport);
   close(new_fd);
   if (pclose(pipe) == -1) return handler_response(551, "No such directory\n", response, status);
@@ -121,7 +121,7 @@ int retr_port(char *request, char *response, struct Status *status) {
     close(status->fd_transport);
     handler_response(425, "Connection to client failed\n", response, status);
   }
-  int retVal = send_data(status->fd_transport, pipe);
+  int retVal = send_data(status->fd_transport, pipe, status);
   close(status->fd_transport);
   if (pclose(pipe) == -1) return handler_response(551, "No such file\n", response, status);
   if (retVal < 0) return handler_response(426, "Send data error\n", response, status);
@@ -143,7 +143,7 @@ int retr_pasv(char *request, char *response, struct Status *status) {
     return handler_response(550, "Failed to open file\n", response, status);
   }
   handler_response(150, "Opening data connection\n", response, status);
-  int retVal = send_data(new_fd, pipe);
+  int retVal = send_data(new_fd, pipe, status);
   close(status->fd_transport);
   close(new_fd);
   if (pclose(pipe) == -1) return handler_response(551, "No such directory\n", response, status);
@@ -151,11 +151,12 @@ int retr_pasv(char *request, char *response, struct Status *status) {
   return handler_response(226, "File transfer complete\n", response, status);
 }
 
-int send_data(int fd, FILE *pipe) {
+int send_data(int fd, FILE *pipe, struct Status *status) {
   char buffer[BUFSIZ];
   while (1) {
     memset(buffer, 0, BUFSIZ);
     unsigned length = fread(buffer, sizeof(char), BUFSIZ, pipe);
+    status->bytesSent += length;
     send(fd, buffer, length, 0);
     if (length < BUFSIZ && ferror(pipe))
       return -1;
@@ -164,9 +165,12 @@ int send_data(int fd, FILE *pipe) {
   }
 }
 
-int recv_data(int fd, FILE *pipe) {
+int recv_data(int fd, FILE *pipe, struct Status *status) {
   char buffer[BUFSIZ];
   int len;
-  while ((len = recv(fd, buffer, BUFSIZ, 0)) > 0) fwrite(buffer, sizeof(char), (unsigned)len, pipe);
+  while ((len = recv(fd, buffer, BUFSIZ, 0)) > 0) {
+    fwrite(buffer, sizeof(char), (unsigned)len, pipe);
+    status->bytesReceived += len;
+  }
   return 0;
 }

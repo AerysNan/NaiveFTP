@@ -28,6 +28,8 @@ struct Status {
   int serverPort[2];
   int fd_transport;
   int fd_command;
+  int bytesSent;
+  int bytesReceived;
   enum LoginStatus loginStatus;
   enum RenameStatus renameStatus;
   enum ConnectType connectType;

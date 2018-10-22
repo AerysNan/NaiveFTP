@@ -47,6 +47,7 @@ var (
 		"bye":   Command{text: "abor", argc: 0},
 		"pwd":   Command{text: "pwd", argc: 0},
 		"rm":    Command{text: "dele", argc: 1},
+		"rest":  Command{text: "rest", argc: 1},
 	}
 )
 

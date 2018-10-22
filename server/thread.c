@@ -11,6 +11,8 @@ int new_connection(void *new_fd) {
   status.renameStatus = RENAME_NONE;
   status.loginStatus = LOG_OUT;
   status.fd_command = *(int *)new_fd;
+  status.bytesSent = 0;
+  status.bytesReceived = 0;
   strcpy(status.rootDir, rootDir);
   memset(status.currentDir, 0, strlen(status.currentDir));
   int tempfd = socket(AF_INET, SOCK_DGRAM, 0);

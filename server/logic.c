@@ -63,12 +63,16 @@ int handler_pass(char *request, char *response, struct Status *status) {
 
 int handler_quit(char *request, char *response, struct Status *status) {
   status->loginStatus = LOG_OUT;
-  return handler_response(221, "Logout\n", response, status);
+  char message[BUFSIZ];
+  sprintf(message, "Logout, %d bytes sent and %d bytes received\n", status->bytesReceived, status->bytesSent);
+  return handler_response(221, message, response, status);
 }
 
 int handler_abor(char *request, char *response, struct Status *status) {
   status->loginStatus = LOG_OUT;
-  return handler_response(221, "Logout\n", response, status);
+  char message[BUFSIZ];
+  sprintf(message, "Logout, %d bytes sent and %d bytes received\n", status->bytesReceived, status->bytesSent);
+  return handler_response(221, message, response, status);
 }
 
 int handler_syst(char *request, char *response, struct Status *status) {

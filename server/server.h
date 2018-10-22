@@ -50,7 +50,7 @@ int stor_pasv(char *request, char *response, struct Status *status);
 int retr_port(char *request, char *response, struct Status *status);
 int retr_pasv(char *request, char *response, struct Status *status);
 
-int send_data(int fd, FILE *pipe);
-int recv_data(int fd, FILE *pipe);
+int send_data(int fd, FILE *pipe, struct Status *status);
+int recv_data(int fd, FILE *pipe, struct Status *status);
 
 #endif
