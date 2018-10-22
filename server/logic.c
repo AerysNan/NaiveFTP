@@ -39,6 +39,7 @@ int handler_user(char *request, char *response, struct Status *status) {
   strcpy(status->userName, request);
   return handler_response(331, "User name okay, need password\n", response, status);
 }
+
 int handler_pass(char *request, char *response, struct Status *status) {
   if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
   if (status->loginStatus == LOG_OUT) return handler_response(503, "Login with USER first\n", response, status);
@@ -59,26 +60,29 @@ int handler_pass(char *request, char *response, struct Status *status) {
   status->loginStatus = LOG_OUT;
   return handler_response(530, "Authentication failed\n", response, status);
 }
-int handler_retr(char *request, char *response, struct Status *status) { return 0; }
-int handler_stor(char *request, char *response, struct Status *status) { return 0; }
+
 int handler_quit(char *request, char *response, struct Status *status) {
   status->loginStatus = LOG_OUT;
   return handler_response(221, "Logout\n", response, status);
 }
+
 int handler_abor(char *request, char *response, struct Status *status) {
   status->loginStatus = LOG_OUT;
   return handler_response(221, "Logout\n", response, status);
 }
+
 int handler_syst(char *request, char *response, struct Status *status) {
   if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (*request != 0) return handler_response(501, "Syntax error\n", response, status);
   return handler_response(215, "UNIX Type: L8\n", response, status);
 }
+
 int handler_type(char *request, char *response, struct Status *status) {
   if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (strcmp(request, "I") == 0) return handler_response(200, "Type set to binary\n", response, status);
   return handler_response(504, "Unknown type\n", response, status);
 }
+
 int handler_port(char *request, char *response, struct Status *status) {
   if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (status->connectType != CONNECT_NONE) {
@@ -122,6 +126,11 @@ int handler_pasv(char *request, char *response, struct Status *status) {
     return handler_response(227, message, response, status);
   }
 }
+
+int handler_retr(char *request, char *response, struct Status *status) { return 0; }
+
+int handler_stor(char *request, char *response, struct Status *status) { return 0; }
+
 int handler_list(char *request, char *response, struct Status *status) {
   if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   int retVal;
@@ -136,6 +145,7 @@ int handler_list(char *request, char *response, struct Status *status) {
   status->connectType = CONNECT_NONE;
   return retVal;
 }
+
 int handler_rnfr(char *request, char *response, struct Status *status) {
   if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
@@ -148,6 +158,7 @@ int handler_rnfr(char *request, char *response, struct Status *status) {
   } else
     return handler_response(550, "File not exist\n", response, status);
 }
+
 int handler_rnto(char *request, char *response, struct Status *status) {
   if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
@@ -158,6 +169,7 @@ int handler_rnto(char *request, char *response, struct Status *status) {
   if (rename(status->rnfName, path) == 0) return handler_response(250, "File successfully renamed or moved\n", response, status);
   return handler_response(553, "Cannot rename or move file\n", response, status);
 }
+
 int handler_mkd(char *request, char *response, struct Status *status) {
   if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
@@ -166,6 +178,7 @@ int handler_mkd(char *request, char *response, struct Status *status) {
   if (mkdir(path, 0777) == 0) return handler_response(250, "Directory successfully created\n", response, status);
   return handler_response(550, "Create directory failed\n", response, status);
 }
+
 int handler_cwd(char *request, char *response, struct Status *status) {
   if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
   if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
@@ -184,9 +197,32 @@ int handler_cwd(char *request, char *response, struct Status *status) {
   strcat(message, "\n");
   return handler_response(250, message, response, status);
 }
-int handler_pwd(char *request, char *response, struct Status *status) { return 0; }
-int handler_rmd(char *request, char *response, struct Status *status) { return 0; }
-int handler_dele(char *request, char *response, struct Status *status) { return 0; }
+
+int handler_pwd(char *request, char *response, struct Status *status) {
+  char message[DIR_LENGTH];
+  strcpy(message, "Current working directory: ");
+  if (*status->currentDir == 0)
+    strcat(message, "/");
+  else
+    strcat(message, status->currentDir);
+  return handler_response(257, message, response, status);
+}
+
+int handler_rmd(char *request, char *response, struct Status *status) {
+  if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
+  char path[DIR_LENGTH];
+  if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
+  if (rmdir(path) == 0) return handler_response(250, "Directory removed\n", response, status);
+  return handler_response(550, "Cannot remove directory\n", response, status);
+}
+
+int handler_dele(char *request, char *response, struct Status *status) {
+  if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
+  char path[DIR_LENGTH];
+  if (path_join(request, status, path) == -1) return handler_response(425, "Illegal path\n", response, status);
+  if (remove(path) == 0) return handler_response(250, "File removed\n", response, status);
+  return handler_response(550, "Cannot remove file\n", response, status);
+}
 
 int list_port(char *path, char *response, struct Status *status) {
   struct sockaddr_in clientAddress;
