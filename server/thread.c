@@ -13,6 +13,7 @@ int new_connection(void *new_fd) {
   status.fd_command = *(int *)new_fd;
   status.bytesSent = 0;
   status.bytesReceived = 0;
+  status.restartPos = 0;
   strcpy(status.rootDir, rootDir);
   memset(status.currentDir, 0, strlen(status.currentDir));
   int tempfd = socket(AF_INET, SOCK_DGRAM, 0);

@@ -30,6 +30,7 @@ struct Status {
   int fd_command;
   int bytesSent;
   int bytesReceived;
+  int restartPos;
   enum LoginStatus loginStatus;
   enum RenameStatus renameStatus;
   enum ConnectType connectType;
@@ -49,6 +50,7 @@ struct PathNode {
 char *trim_space_left(char *string);
 char *trim_space_right(char *string);
 char *trim_space(char *string);
+void toLower(char *string);
 
 int path_join(char *path, struct Status *status, char *out);
 int path_squash(char *path, char *squashed);

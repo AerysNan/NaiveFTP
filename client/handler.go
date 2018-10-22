@@ -47,7 +47,6 @@ var (
 		"bye":   Command{text: "abor", argc: 0},
 		"pwd":   Command{text: "pwd", argc: 0},
 		"rm":    Command{text: "dele", argc: 1},
-		"rest":  Command{text: "rest", argc: 1},
 	}
 )
 
@@ -113,10 +112,10 @@ func (handler *Handler) DataRequest(connection net.Conn, fileName string) {
 	}
 }
 
-func (handler *Handler) DataResponse(connection net.Conn, fileName string) {
+func (handler *Handler) DataResponse(connection net.Conn, fileName string, flag int) {
 	var file *os.File
 	if fileName != "" {
-		file, _ = os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0755)
+		file, _ = os.OpenFile(fileName, flag, 0755)
 	}
 	defer func() {
 		if fileName != "" {

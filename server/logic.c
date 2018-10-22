@@ -1,9 +1,9 @@
 #include "server.h"
 
 struct Command commandList[] = {
-    {"user", handler_user}, {"pass", handler_pass}, {"retr", handler_retr}, {"stor", handler_stor}, {"quit", handler_quit}, {"syst", handler_syst},
-    {"type", handler_type}, {"port", handler_port}, {"pasv", handler_pasv}, {"list", handler_list}, {"rnfr", handler_rnfr}, {"rnto", handler_rnto},
-    {"mkd", handler_mkd},   {"cwd", handler_cwd},   {"pwd", handler_pwd},   {"rmd", handler_rmd},   {"dele", handler_dele}, {"abor", handler_abor},
+    {"user", handler_user}, {"pass", handler_pass}, {"retr", handler_retr}, {"stor", handler_stor}, {"quit", handler_quit}, {"syst", handler_syst}, {"type", handler_type},
+    {"port", handler_port}, {"pasv", handler_pasv}, {"list", handler_list}, {"rnfr", handler_rnfr}, {"rnto", handler_rnto}, {"mkd", handler_mkd},   {"cwd", handler_cwd},
+    {"pwd", handler_pwd},   {"rmd", handler_rmd},   {"dele", handler_dele}, {"abor", handler_abor}, {"rest", handler_rest},
 };
 
 struct User userList[] = {
@@ -13,6 +13,7 @@ struct User userList[] = {
 
 int handler_request(char *request, char *response, struct Status *status) {
   int size = sizeof(commandList) / sizeof(*commandList);
+  toLower(request);
   for (int i = 0; i < size; i++) {
     struct Command *command = &commandList[i];
     int len = strlen(command->text);
@@ -73,6 +74,16 @@ int handler_abor(char *request, char *response, struct Status *status) {
   char message[BUFSIZ];
   sprintf(message, "Logout, %d bytes sent and %d bytes received\n", status->bytesReceived, status->bytesSent);
   return handler_response(221, message, response, status);
+}
+
+int handler_rest(char *request, char *response, struct Status *status) {
+  if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
+  if (*request == 0) return handler_response(501, "Syntax error\n", response, status);
+  int length = atoi(request);
+  status->restartPos = length;
+  char message[50];
+  sprintf(message, "Restarting at %d\n", length);
+  return handler_response(350, message, response, status);
 }
 
 int handler_syst(char *request, char *response, struct Status *status) {

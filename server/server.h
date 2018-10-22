@@ -36,6 +36,7 @@ int handler_rnfr(char *request, char *response, struct Status *status);
 int handler_rnto(char *request, char *response, struct Status *status);
 int handler_dele(char *request, char *response, struct Status *status);
 int handler_abor(char *request, char *response, struct Status *status);
+int handler_rest(char *request, char *response, struct Status *status);
 int handler_mkd(char *request, char *response, struct Status *status);
 int handler_cwd(char *request, char *response, struct Status *status);
 int handler_pwd(char *request, char *response, struct Status *status);

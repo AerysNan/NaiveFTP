@@ -20,6 +20,14 @@ char *trim_space_right(char *string) {
 
 char *trim_space(char *string) { return trim_space_right(trim_space_left(string)); }
 
+void toLower(char *string) {
+  int length = strlen(string);
+  for (int i = 0; i < length; i++) {
+    if (string[i] == ' ') break;
+    if (string[i] >= 'A' && string[i] <= 'Z') string[i] = string[i] - 'A' + 'a';
+  }
+}
+
 int path_join(char *path, struct Status *status, char *out) {
   strcpy(out, status->rootDir);
   char input[DIR_LENGTH];

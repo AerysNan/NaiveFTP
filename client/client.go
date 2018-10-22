@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -105,7 +106,7 @@ func main() {
 				conn, resp := handler.CmdPassive("retr " + inputList[1])
 				if strings.HasPrefix(resp, "150") {
 					_, fileName := path.Split(inputList[1])
-					handler.DataResponse(conn, fileName)
+					handler.DataResponse(conn, fileName, os.O_CREATE|os.O_WRONLY)
 					conn.Close()
 					fmt.Println(handler.InstResponse())
 				}
@@ -116,7 +117,7 @@ func main() {
 					if strings.HasPrefix(resp, "150") {
 						conn, _ := lis.Accept()
 						_, fileName := path.Split(inputList[1])
-						handler.DataResponse(conn, fileName)
+						handler.DataResponse(conn, fileName, os.O_CREATE|os.O_WRONLY)
 						conn.Close()
 						fmt.Println(handler.InstResponse())
 					}
@@ -157,7 +158,7 @@ func main() {
 			if handler.passive {
 				conn, resp := handler.CmdPassive(cmdfull)
 				if strings.HasPrefix(resp, "150") {
-					handler.DataResponse(conn, "")
+					handler.DataResponse(conn, "", 0)
 					conn.Close()
 					fmt.Println(handler.InstResponse())
 				}
@@ -167,7 +168,7 @@ func main() {
 					defer lis.Close()
 					if strings.HasPrefix(resp, "150") {
 						conn, _ := lis.Accept()
-						handler.DataResponse(conn, "")
+						handler.DataResponse(conn, "", 0)
 						conn.Close()
 						fmt.Println(handler.InstResponse())
 					}
@@ -186,6 +187,38 @@ func main() {
 			}
 			handler.InstRequest("rnto " + inputList[2])
 			fmt.Println(handler.InstResponse())
+		} else if cmdstr == "restart" {
+			if len(inputList) < 2 {
+				goto label
+			}
+			_, fileName := path.Split(inputList[1])
+			file, _ := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0755)
+			info, _ := file.Stat()
+			fmt.Println("rest " + strconv.Itoa(int(info.Size())))
+			handler.InstRequest("rest " + strconv.Itoa(int(info.Size())))
+			fmt.Println(handler.InstResponse())
+			file.Close()
+			if handler.passive {
+				conn, resp := handler.CmdPassive("retr " + inputList[1])
+				if strings.HasPrefix(resp, "150") {
+					_, fileName := path.Split(inputList[1])
+					handler.DataResponse(conn, fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND)
+					conn.Close()
+					fmt.Println(handler.InstResponse())
+				}
+			} else {
+				func() {
+					lis, resp := handler.CmdPositive("retr " + inputList[1])
+					defer lis.Close()
+					if strings.HasPrefix(resp, "150") {
+						conn, _ := lis.Accept()
+						_, fileName := path.Split(inputList[1])
+						handler.DataResponse(conn, fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND)
+						conn.Close()
+						fmt.Println(handler.InstResponse())
+					}
+				}()
+			}
 		} else {
 			goto label
 		}

@@ -112,6 +112,8 @@ int retr_port(char *request, char *response, struct Status *status) {
   sprintf(ip, "%d.%d.%d.%d", status->clientIP[0], status->clientIP[1], status->clientIP[2], status->clientIP[3]);
   clientAddress.sin_addr.s_addr = inet_addr((const char *)ip);
   FILE *pipe = fopen(request, "r");
+  fseek(pipe, status->restartPos, SEEK_SET);
+  status->restartPos = 0;
   if (!pipe) {
     close(status->fd_transport);
     return handler_response(550, "Failed to open file\n", response, status);
@@ -137,6 +139,8 @@ int retr_pasv(char *request, char *response, struct Status *status) {
     return handler_response(425, "Connection to client failed\n", response, status);
   }
   FILE *pipe = fopen(request, "r");
+  fseek(pipe, status->restartPos, SEEK_SET);
+  status->restartPos = 0;
   if (!pipe) {
     close(status->fd_transport);
     close(new_fd);
