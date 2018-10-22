@@ -1,9 +1,11 @@
 #include "server.h"
 #include "util.h"
 
-struct Command commandList[] = {{"user", handler_user}, {"pass", handler_pass}, {"retr", handler_retr}, {"stor", handler_stor}, {"quit", handler_quit}, {"syst", handler_syst},
-                                {"type", handler_type}, {"port", handler_port}, {"pasv", handler_pasv}, {"list", handler_list}, {"rnfr", handler_rnfr}, {"rnto", handler_rnto},
-                                {"mkd", handler_mkd},   {"cwd", handler_cwd},   {"pwd", handler_pwd},   {"rmd", handler_rmd},   {"dele", handler_dele}};
+struct Command commandList[] = {
+    {"user", handler_user}, {"pass", handler_pass}, {"retr", handler_retr}, {"stor", handler_stor}, {"quit", handler_quit}, {"syst", handler_syst},
+    {"type", handler_type}, {"port", handler_port}, {"pasv", handler_pasv}, {"list", handler_list}, {"rnfr", handler_rnfr}, {"rnto", handler_rnto},
+    {"mkd", handler_mkd},   {"cwd", handler_cwd},   {"pwd", handler_pwd},   {"rmd", handler_rmd},   {"dele", handler_dele}, {"abor", handler_abor},
+};
 
 struct User userList[] = {
     {"Aerys", "123456"},
@@ -59,7 +61,14 @@ int handler_pass(char *request, char *response, struct Status *status) {
 }
 int handler_retr(char *request, char *response, struct Status *status) { return 0; }
 int handler_stor(char *request, char *response, struct Status *status) { return 0; }
-int handler_quit(char *request, char *response, struct Status *status) { return 0; }
+int handler_quit(char *request, char *response, struct Status *status) {
+  status->loginStatus = LOG_OUT;
+  return handler_response(221, "Logout\n", response, status);
+}
+int handler_abor(char *request, char *response, struct Status *status) {
+  status->loginStatus = LOG_OUT;
+  return handler_response(221, "Logout\n", response, status);
+}
 int handler_syst(char *request, char *response, struct Status *status) {
   if (*request != 0) return handler_response(501, "Syntax error\n", response, status);
   return handler_response(215, "UNIX Type: L8\n", response, status);

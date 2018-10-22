@@ -2,7 +2,9 @@
 #define SERVER_H
 
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <errno.h>
+#include <getopt.h>
 #include <net/if.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -32,6 +34,8 @@ struct User {
 struct Status {
   char userName[25];
   char rnfName[25];
+  char rootDir[20];
+  char currentDir[100];
   int clientIP[4];
   int clientPort[2];
   int serverIP[4];
@@ -48,6 +52,8 @@ struct Command {
   int (*handler)(char *request, char *response, struct Status *status);
 };
 
+int parse_commandline(int argc, char *argv[]);
+
 int handler_request(char *request, char *response, struct Status *status);
 int handler_response(int code, char *description, char *response, struct Status *status);
 
@@ -63,11 +69,12 @@ int handler_pasv(char *request, char *response, struct Status *status);
 int handler_list(char *request, char *response, struct Status *status);
 int handler_rnfr(char *request, char *response, struct Status *status);
 int handler_rnto(char *request, char *response, struct Status *status);
+int handler_dele(char *request, char *response, struct Status *status);
+int handler_abor(char *request, char *response, struct Status *status);
 int handler_mkd(char *request, char *response, struct Status *status);
 int handler_cwd(char *request, char *response, struct Status *status);
 int handler_pwd(char *request, char *response, struct Status *status);
 int handler_rmd(char *request, char *response, struct Status *status);
-int handler_dele(char *request, char *response, struct Status *status);
 
 int new_connection(void *new_fd);
 

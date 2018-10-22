@@ -1,5 +1,7 @@
 #include "server.h"
 
+extern char rootDir[20];
+
 int new_connection(void *new_fd) {
   int numbytes;
   char input_buffer[BUFSIZ];
@@ -9,6 +11,9 @@ int new_connection(void *new_fd) {
   status.renameStatus = RENAME_NONE;
   status.loginStatus = LOG_OUT;
   status.fd_command = *(int *)new_fd;
+  strcpy(status.rootDir, rootDir);
+  printf("%s", rootDir);
+  fflush(stdout);
   int tempfd = socket(AF_INET, SOCK_DGRAM, 0);
   struct ifreq ifr;
   ifr.ifr_addr.sa_family = AF_INET;
