@@ -18,9 +18,8 @@ int main(int argc, char *argv[]) {
     printf("Initialize user list failed\n");
     return 1;
   }
-  int fd, struct_len, numbytes;
+  int fd, struct_len;
   struct sockaddr_in server_address;
-  void *return_val;
   server_address.sin_family = AF_INET;
   server_address.sin_port = htons(portNum);
   server_address.sin_addr.s_addr = INADDR_ANY;
@@ -42,7 +41,7 @@ int main(int argc, char *argv[]) {
   while (1) {
     int new_fd;
     struct sockaddr_in client_address;
-    new_fd = accept(fd, (struct sockaddr *)&client_address, &struct_len);
+    new_fd = accept(fd, (struct sockaddr *)&client_address, (socklen_t *)&struct_len);
     if (new_fd == -1) {
       perror("Accept new connection failed");
       return 1;

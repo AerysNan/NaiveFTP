@@ -16,13 +16,24 @@ int new_connection(void *new_fd) {
   status.restartPos = 0;
   strcpy(status.rootDir, rootDir);
   memset(status.currentDir, 0, strlen(status.currentDir));
-  int tempfd = socket(AF_INET, SOCK_DGRAM, 0);
-  struct ifreq ifr;
-  ifr.ifr_addr.sa_family = AF_INET;
-  strncpy(ifr.ifr_name, "enp0s8", IFNAMSIZ - 1);
-  ioctl(tempfd, SIOCGIFADDR, &ifr);
-  close(tempfd);
-  sscanf(inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr), "%d.%d.%d.%d", &status.serverIP[0], &status.serverIP[1], &status.serverIP[2], &status.serverIP[3]);
+  struct ifaddrs *addrList;
+  getifaddrs(&addrList);
+  for (struct ifaddrs *p = addrList; p; p = p->ifa_next) {
+    if (p->ifa_addr && p->ifa_addr->sa_family == AF_INET) {
+      struct sockaddr_in *p_addr = (struct sockaddr_in *)p->ifa_addr;
+      in_addr_t addr = p_addr->sin_addr.s_addr;
+      status.serverIP[3] = (int)((addr >> 24) & 0xff);
+      status.serverIP[2] = (int)((addr >> 16) & 0xff);
+      status.serverIP[1] = (int)((addr >> 8) & 0xff);
+      status.serverIP[0] = (int)((addr & 0xff));
+      if (status.serverIP[0] != 127) {
+        char ipv4[20];
+        sprintf(ipv4, "%d.%d.%d.%d", status.serverIP[0], status.serverIP[1], status.serverIP[2], status.serverIP[3]);
+        printf("Local IP: %s\n", ipv4);
+        break;
+      }
+    }
+  }
   handler_response(220, "Naive FTP server ready. Current working directory is /\n", output_buffer, &status);
   while ((numbytes = recv(status.fd_command, input_buffer, BUFSIZ, 0)) > 0) {
     input_buffer[numbytes - 2] = '\0';

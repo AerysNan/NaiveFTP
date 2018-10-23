@@ -31,7 +31,7 @@ int list_port(char *path, char *response, struct Status *status) {
 int list_pasv(char *path, char *response, struct Status *status) {
   int struct_len;
   struct sockaddr_in clientAddress;
-  int new_fd = accept(status->fd_transport, (struct sockaddr *)&clientAddress, &struct_len);
+  int new_fd = accept(status->fd_transport, (struct sockaddr *)&clientAddress, (socklen_t *)&struct_len);
   if (new_fd == -1) {
     close(status->fd_transport);
     close(new_fd);
@@ -83,7 +83,7 @@ int stor_port(char *request, char *response, struct Status *status) {
 int stor_pasv(char *request, char *response, struct Status *status) {
   int struct_len;
   struct sockaddr_in clientAddress;
-  int new_fd = accept(status->fd_transport, (struct sockaddr *)&clientAddress, &struct_len);
+  int new_fd = accept(status->fd_transport, (struct sockaddr *)&clientAddress, (socklen_t *)&struct_len);
   if (new_fd == -1) {
     close(status->fd_transport);
     close(new_fd);
@@ -132,7 +132,7 @@ int retr_port(char *request, char *response, struct Status *status) {
 int retr_pasv(char *request, char *response, struct Status *status) {
   int struct_len;
   struct sockaddr_in clientAddress;
-  int new_fd = accept(status->fd_transport, (struct sockaddr *)&clientAddress, &struct_len);
+  int new_fd = accept(status->fd_transport, (struct sockaddr *)&clientAddress, (socklen_t *)&struct_len);
   if (new_fd == -1) {
     close(status->fd_transport);
     close(new_fd);

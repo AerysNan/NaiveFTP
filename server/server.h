@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <getopt.h>
+#include <ifaddrs.h>
 #include <net/if.h>
 #include <netdb.h>
 #include <netinet/in.h>
