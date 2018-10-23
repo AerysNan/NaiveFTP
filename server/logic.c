@@ -91,7 +91,7 @@ int handler_syst(char *request, char *response, struct Status *status) {
 
 int handler_type(char *request, char *response, struct Status *status) {
   if (status->loginStatus != LOG_IN) return handler_response(530, "User not logged in\n", response, status);
-  if (strcmp(request, "I") == 0) return handler_response(200, "Type set to binary\n", response, status);
+  if (strcmp(request, "I") == 0) return handler_response(200, "Type set to I.\n", response, status);
   return handler_response(504, "Unknown type\n", response, status);
 }
 
