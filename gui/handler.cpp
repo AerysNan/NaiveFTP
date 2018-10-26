@@ -8,38 +8,60 @@ Handler::Handler(){
 }
 
 void Handler::inst_request(QString inst){
-    QString data = inst.trimmed() + QString("\r\n");
+    QString data = inst.trimmed() + "\r\n";
     this->socket->write(data.toStdString().c_str());
 }
 
 QString Handler::inst_response(){
-    this->socket->waitForReadyRead(-1);
-    QByteArray array = this->socket->readAll();
-    return QString(array).trimmed();
+    QString response = "";
+    QByteArray testArray =this->socket->readLine();
+    if(testArray.size()==0)
+        this->socket->waitForReadyRead(-1);
+    else{
+        qDebug() << "Read command line from previous buffer" << testArray;
+        response.append(testArray);
+    }
+    while(true){
+        QByteArray array = this->socket->readLine();
+        qDebug() << "Read command line:" << array;
+        if(array.size() == 0 || array.at(3) == ' '){
+            qDebug() << "Read command line finished.";
+            response.append(array);
+            return response;
+        }
+        response.append(array);
+    }
 }
 
 QPair<QTcpServer*, QString> Handler::cmd_positve(QString cmd){
-    QHostAddress hostAddress = this->socket->localAddress();
-    QString ip = hostAddress.toString().split(".").join(",");
+    QString ip;
+    for(QHostAddress address : QNetworkInterface::allAddresses()) {
+        if (address.protocol() == QAbstractSocket::IPv4Protocol && address != QHostAddress(QHostAddress::LocalHost)){
+            ip = address.toString();
+            if(ip.section('.', -1, -1) == "1" || ip.section('.', 0, 0) == "169" || ip.section('.', 0, 0) == "192")
+                continue;
+            qDebug() << "Using IP address:" << address.toString();
+            ip = ip.split('.').join(',');
+            break;
+        }
+    }
     while(true) {
         int port = qrand()%45535+20000;
         QTcpServer* server = new QTcpServer;
         if(server->listen(QHostAddress::Any, port)){
-            QString message = QString("port " + ip + "," + QString(port>>8) + ","  + QString(port & 0xff));
+            QString message = "port " + ip + "," + QString::number(port>>8) + ","  + QString::number(port & 0xff);
             this->inst_request(message);
             emit this->get_response(this->inst_response());
             this->inst_request(cmd);
             QString response = this->inst_response();
-            emit this->get_response(this->inst_response());
-            if(response.startsWith("150"))
-                return QPair<QTcpServer*, QString>(nullptr, response);
+            emit this->get_response(response);
             return QPair<QTcpServer*, QString>(server, response);
         }
     }
 }
 
 QPair<QTcpSocket*, QString> Handler::cmd_passive(QString cmd){
-    this->inst_request(QString("pasv"));
+    this->inst_request("pasv");
     QString response = this->inst_response();
     emit this->get_response(response);
     QRegularExpression regex("\\((\\d+),(\\d+),(\\d+),(\\d+),(\\d+),(\\d+)\\)");
@@ -50,10 +72,13 @@ QPair<QTcpSocket*, QString> Handler::cmd_passive(QString cmd){
     int h4 = match.captured(4).toInt();
     int p1 = match.captured(5).toInt();
     int p2 = match.captured(6).toInt();
-    QString url = QString(h1) + "." + QString(h2) + "." + QString(h3) + "." + QString(h4);
+    QString url = QString::number(h1) + "." + QString::number(h2) + "." + QString::number(h3) + "." + QString::number(h4);
     QTcpSocket* transportSocket = new QTcpSocket;
     transportSocket->connectToHost(url, (p1<<8)+p2, QTcpSocket::ReadWrite);
+    transportSocket->waitForConnected(-1);
+    qDebug() << "Transport channel connected.";
     this->inst_request(cmd);
+    qDebug() << "Command passive:" << cmd;
     response = this->inst_response();
     emit this->get_response(response);
     return QPair<QTcpSocket*, QString>(transportSocket, response);
@@ -61,30 +86,32 @@ QPair<QTcpSocket*, QString> Handler::cmd_passive(QString cmd){
 
 void Handler::data_request(QTcpSocket* tranportSocket, QFile* file){
     while(true) {
-        char buffer[BUFSIZ];
-        if(file->read(buffer, BUFSIZ) <= 0){
-            tranportSocket->write(buffer, qstrlen(buffer));
+        QByteArray array = file->readLine();
+        if(array.size() <= 0)
             return;
-        }
-        tranportSocket->write(buffer, BUFSIZ);
+        qDebug() << "===== Send array =====";
+        qDebug() << array;
+        tranportSocket->write(array);
+        tranportSocket->waitForBytesWritten(-1);
     }
 }
 
-void Handler::data_response(QTcpSocket* socket, QFile *file){
+void Handler::data_response(QTcpSocket* transportSocket, QFile *file){
     QString string = "";
     while(true){
-        char buffer[BUFSIZ];
-        if(socket->read(buffer, BUFSIZ) <= 0){
-            if(file != nullptr)
-                file->write(buffer, qstrlen(buffer));
-            else
-                string += buffer;
+        transportSocket->waitForReadyRead(-1);
+        QByteArray array = transportSocket->readLine();
+        if(array.size() <= 0){
+            qDebug() << "Data transport finished.";
+            if(file == nullptr)
                 emit this->get_listdata(string);
             return;
         }
+        qDebug() << "===== Read array =====";
+        qDebug() << array;
         if(file != nullptr)
-            file->write(buffer, BUFSIZ);
+            file->write(array);
         else
-            string += buffer;
+            string.append(array);
     }
 }

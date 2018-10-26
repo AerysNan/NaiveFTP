@@ -27,11 +27,16 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         widget.cpp \
-    handler.cpp
+    handler.cpp \
+    tableview.cpp
 
 HEADERS += \
         widget.h \
-    handler.h
+    handler.h \
+    tableview.h
 
 FORMS += \
         widget.ui
+
+RESOURCES += \
+    resource.qrc

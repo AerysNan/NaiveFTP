@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"math/rand"
@@ -56,9 +58,17 @@ func (handler *Handler) InstRequest(inst string) {
 }
 
 func (handler *Handler) InstResponse() string {
-	buffer := make([]byte, BUFFERSIZE)
-	n, _ := handler.connection.Read(buffer)
-	return strings.TrimSpace(string(buffer[:n]))
+	var buffer bytes.Buffer
+	scanner := bufio.NewScanner(handler.connection)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) < 4 || line[3] == ' ' {
+			buffer.Write([]byte(line + "\r\n"))
+			return strings.TrimSpace(buffer.String())
+		}
+		buffer.Write([]byte(line + "\r\n"))
+	}
+	return strings.TrimSpace(buffer.String())
 }
 
 func (handler *Handler) CmdPassive(cmd string) (net.Conn, string) {
@@ -79,6 +89,7 @@ func (handler *Handler) CmdPassive(cmd string) (net.Conn, string) {
 
 func (handler *Handler) CmdPositive(cmd string) (net.Listener, string) {
 	host, _, _ := net.SplitHostPort(handler.connection.LocalAddr().String())
+	fmt.Println(host)
 	ip := strings.Join(strings.Split(host, "."), ",")
 	for {
 		port := rand.Int()%45535 + 20000
@@ -101,11 +112,10 @@ func (handler *Handler) DataRequest(connection net.Conn, file *os.File) {
 	for {
 		buffer := make([]byte, BUFFERSIZE)
 		n, err := file.Read(buffer)
-		if err == io.EOF || n < BUFFERSIZE {
-			connection.Write(buffer[:n])
+		if err == io.EOF {
 			return
 		}
-		connection.Write(buffer)
+		connection.Write(buffer[:n])
 
 	}
 }
@@ -114,16 +124,14 @@ func (handler *Handler) DataResponse(connection net.Conn, file *os.File) {
 	for {
 		buffer := make([]byte, BUFFERSIZE)
 		n, err := connection.Read(buffer)
-		buffer = buffer[:n]
 		print := func() {
 			if file != nil {
-				file.Write(buffer)
+				file.Write(buffer[:n])
 			} else {
-				fmt.Println(strings.TrimSpace(string(buffer)))
+				fmt.Println(strings.TrimSpace(string(buffer[:n])))
 			}
 		}
-		if err == io.EOF || n < BUFFERSIZE {
-			print()
+		if err == io.EOF {
 			return
 		}
 		print()

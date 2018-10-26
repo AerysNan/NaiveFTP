@@ -9,6 +9,7 @@
 #include<QTcpSocket>
 #include<QByteArray>
 #include<QStringList>
+#include<QNetworkInterface>
 #include<QRegularExpression>
 
 struct Command{

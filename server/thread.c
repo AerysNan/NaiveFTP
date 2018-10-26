@@ -7,10 +7,11 @@ int new_connection(void *new_fd) {
   char input_buffer[BUFSIZ];
   char output_buffer[BUFSIZ];
   struct Status status;
+  int fd = *(int*)new_fd;
   status.connectType = CONNECT_NONE;
   status.renameStatus = RENAME_NONE;
   status.loginStatus = LOG_OUT;
-  status.fd_command = *(int *)new_fd;
+  status.fd_command = fd;
   status.bytesSent = 0;
   status.bytesReceived = 0;
   status.restartPos = 0;
@@ -39,6 +40,6 @@ int new_connection(void *new_fd) {
     input_buffer[numbytes - 2] = '\0';
     if (handler_request(input_buffer, output_buffer, &status) == -1) break;
   }
-  close(*(int *)new_fd);
+  close(fd);
   return 0;
 }
