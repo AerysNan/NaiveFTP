@@ -61,12 +61,14 @@ void Widget::show_response(QString response){
 
 void Widget::show_listdata(QString response){
     this->model->setRowCount(0);
-    QStringList stringList = response.split("\r\n");
+    QStringList stringList = response.split("\n");
     for(QString string: stringList){
         if(string.size() == 0)
             continue;
-        QRegularExpression regex("([drwxbcl-]{10})\\s+?(\\d+)\\s+?(\\w+)\\s+?(\\w+)\\s+?(\\d+)\\s+?([a-zA-Z]{3}\\s\\d+\\s\\d+:\\d+)\\s+?(\\S+)");
+        QRegularExpression regex("^([drwxbcl-]{10})\\s+?(\\d+)\\s+?(\\w+)\\s+?(\\w+)\\s+?(\\d+)\\s+?(\\S+\\s+?\\d+\\s+?\\d+:\\d+)\\s+?(\\S+)\\s*$");
         QRegularExpressionMatch match = regex.match(string);
+        if(!match.hasMatch())
+            continue;
         QList<QStandardItem*> itemList;
         if(match.captured(7) == ".")
             continue;
@@ -213,6 +215,8 @@ void Widget::change_directory(int row){
     this->handler->inst_request("cwd " + directoryName);
     QString response = this->handler->inst_response();
     this->show_response(response);
+    if(!response.startsWith("250"))
+        return;
     this->update_pathedit();
     this->update_tableview();
 }

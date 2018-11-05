@@ -8,16 +8,32 @@
 #define DIR_LENGTH 500
 #define PORT_ARGUMENT 6
 
-enum LoginStatus { LOG_OUT, LOG_PASS, LOG_IN };
-enum RenameStatus { RENAME_NONE, RENAME_PROGRESS };
-enum ConnectType { CONNECT_NONE, CONNECT_POSITIVE, CONNECT_PASSIVE };
+enum LoginStatus
+{
+  LOG_OUT,
+  LOG_PASS,
+  LOG_IN
+};
+enum RenameStatus
+{
+  RENAME_NONE,
+  RENAME_PROGRESS
+};
+enum ConnectType
+{
+  CONNECT_NONE,
+  CONNECT_POSITIVE,
+  CONNECT_PASSIVE
+};
 
-struct User {
+struct User
+{
   char username[25];
   char password[25];
 };
 
-struct Status {
+struct Status
+{
   char userName[25];
   char rnfName[25];
   char rootDir[20];
@@ -36,12 +52,14 @@ struct Status {
   enum ConnectType connectType;
 };
 
-struct Command {
+struct Command
+{
   char text[5];
   int (*handler)(char *request, char *response, struct Status *status);
 };
 
-struct PathNode {
+struct PathNode
+{
   char dir[50];
   struct PathNode *prev;
   struct PathNode *next;

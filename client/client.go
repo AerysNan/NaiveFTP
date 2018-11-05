@@ -38,13 +38,13 @@ func main() {
 		os.Exit(1)
 	}
 	handler.connection = connection
+	handler.scanner = bufio.NewScanner(handler.connection)
 	fmt.Println(connection.LocalAddr(), connection.RemoteAddr())
 	handler.passive = true
 	response := handler.InstResponse()
 	fmt.Println(response)
 	fmt.Print("Username:")
 	username, _, _ := reader.ReadLine()
-	fmt.Println(string(username))
 	handler.InstRequest("user " + string(username))
 	response = handler.InstResponse()
 	fmt.Println(response)
@@ -74,6 +74,7 @@ func main() {
 			response := handler.InstResponse()
 			fmt.Println(response)
 			if strings.HasPrefix(response, "221") {
+				handler.connection.Close()
 				os.Exit(0)
 			}
 		} else if ok && command.argc == 1 {

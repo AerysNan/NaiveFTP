@@ -20,6 +20,7 @@ type Command struct {
 
 type Handler struct {
 	connection net.Conn
+	scanner    *bufio.Scanner
 	passive    bool
 }
 
@@ -59,9 +60,8 @@ func (handler *Handler) InstRequest(inst string) {
 
 func (handler *Handler) InstResponse() string {
 	var buffer bytes.Buffer
-	scanner := bufio.NewScanner(handler.connection)
-	for scanner.Scan() {
-		line := scanner.Text()
+	for handler.scanner.Scan() {
+		line := handler.scanner.Text()
 		if len(line) < 4 || line[3] == ' ' {
 			buffer.Write([]byte(line + "\r\n"))
 			return strings.TrimSpace(buffer.String())
@@ -114,6 +114,8 @@ func (handler *Handler) DataRequest(connection net.Conn, file *os.File) {
 		n, err := file.Read(buffer)
 		if err == io.EOF {
 			return
+		} else if err != nil {
+			fmt.Println(err)
 		}
 		connection.Write(buffer[:n])
 
